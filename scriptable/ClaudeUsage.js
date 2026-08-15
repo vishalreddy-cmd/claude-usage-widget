@@ -19,8 +19,14 @@ const CACHE_PATH = FileManager.local().joinPath(
 );
 
 async function fetchUsage() {
-  const req = new Request(GIST_RAW_URL);
+  // Cache-bust: gist.github.com's raw URL is served through a CDN that can
+  // keep serving a stale snapshot of the exact same URL for a few minutes
+  // after the gist content changes. A unique query string each request
+  // forces a real fetch instead of a cached hit.
+  const url = `${GIST_RAW_URL}?t=${Date.now()}`;
+  const req = new Request(url);
   req.timeoutInterval = 10;
+  req.headers = { "Cache-Control": "no-cache" };
   const data = await req.loadJSON();
   FileManager.local().writeString(CACHE_PATH, JSON.stringify(data));
   return { data, stale: false };
